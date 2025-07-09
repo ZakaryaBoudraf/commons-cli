@@ -555,64 +555,114 @@ public class DefaultParser implements CommandLineParser {
     private void handleShortAndLongOption(final String hyphenToken) throws ParseException {
         final String token = Util.stripLeadingHyphens(hyphenToken);
         final int pos = indexOfEqual(token);
+        
         if (token.length() == 1) {
-            // -S
-            if (options.hasShortOption(token)) {
-                handleOption(options.getOption(token));
-            } else {
-                handleUnknownToken(hyphenToken);
-            }
+            handleSingleCharacterOption(token, hyphenToken);
         } else if (pos == -1) {
-            // no equal sign found (-xxx)
-            if (options.hasShortOption(token)) {
-                handleOption(options.getOption(token));
-            } else if (!getMatchingLongOptions(token).isEmpty()) {
-                // -L or -l
-                handleLongOptionWithoutEqual(hyphenToken);
-            } else {
-                // look for a long prefix (-Xmx512m)
-                final String opt = getLongPrefix(token);
-
-                if (opt != null && options.getOption(opt).acceptsArg()) {
-                    handleOption(options.getOption(opt));
-                    currentOption.processValue(stripLeadingAndTrailingQuotesDefaultOff(token.substring(opt.length())));
-                    currentOption = null;
-                } else if (isJavaProperty(token)) {
-                    // -SV1 (-Dflag)
-                    handleOption(options.getOption(token.substring(0, 1)));
-                    currentOption.processValue(stripLeadingAndTrailingQuotesDefaultOff(token.substring(1)));
-                    currentOption = null;
-                } else {
-                    // -S1S2S3 or -S1S2V
-                    handleConcatenatedOptions(hyphenToken);
-                }
-            }
+            handleOptionWithoutEqual(token, hyphenToken);
         } else {
-            // equal sign found (-xxx=yyy)
-            final String opt = token.substring(0, pos);
-            final String value = token.substring(pos + 1);
-
-            if (opt.length() == 1) {
-                // -S=V
-                final Option option = options.getOption(opt);
-                if (option != null && option.acceptsArg()) {
-                    handleOption(option);
-                    currentOption.processValue(value);
-                    currentOption = null;
-                } else {
-                    handleUnknownToken(hyphenToken);
-                }
-            } else if (isJavaProperty(opt)) {
-                // -SV1=V2 (-Dkey=value)
-                handleOption(options.getOption(opt.substring(0, 1)));
-                currentOption.processValue(opt.substring(1));
-                currentOption.processValue(value);
-                currentOption = null;
-            } else {
-                // -L=V or -l=V
-                handleLongOptionWithEqual(hyphenToken);
-            }
+            handleOptionWithEqual(token, pos, hyphenToken);
         }
+    }
+
+    /**
+     * Handles single character options like -S.
+     */
+    private void handleSingleCharacterOption(final String token, final String hyphenToken) throws ParseException {
+        if (options.hasShortOption(token)) {
+            handleOption(options.getOption(token));
+        } else {
+            handleUnknownToken(hyphenToken);
+        }
+    }
+
+    /**
+     * Handles options without equal sign like -xxx.
+     */
+    private void handleOptionWithoutEqual(final String token, final String hyphenToken) throws ParseException {
+        if (options.hasShortOption(token)) {
+            handleOption(options.getOption(token));
+        } else if (!getMatchingLongOptions(token).isEmpty()) {
+            // -L or -l
+            handleLongOptionWithoutEqual(hyphenToken);
+        } else {
+            handleComplexOption(token, hyphenToken);
+        }
+    }
+
+    /**
+     * Handles complex options like long prefixes, Java properties, or concatenated options.
+     */
+    private void handleComplexOption(final String token, final String hyphenToken) throws ParseException {
+        final String opt = getLongPrefix(token);
+
+        if (opt != null && options.getOption(opt).acceptsArg()) {
+            handleLongPrefixOption(opt, token);
+        } else if (isJavaProperty(token)) {
+            handleJavaPropertyOption(token);
+        } else {
+            // -S1S2S3 or -S1S2V
+            handleConcatenatedOptions(hyphenToken);
+        }
+    }
+
+    /**
+     * Handles long prefix options like -Xmx512m.
+     */
+    private void handleLongPrefixOption(final String opt, final String token) throws ParseException {
+        handleOption(options.getOption(opt));
+        currentOption.processValue(stripLeadingAndTrailingQuotesDefaultOff(token.substring(opt.length())));
+        currentOption = null;
+    }
+
+    /**
+     * Handles Java property options like -Dflag.
+     */
+    private void handleJavaPropertyOption(final String token) throws ParseException {
+        handleOption(options.getOption(token.substring(0, 1)));
+        currentOption.processValue(stripLeadingAndTrailingQuotesDefaultOff(token.substring(1)));
+        currentOption = null;
+    }
+
+    /**
+     * Handles options with equal sign like -xxx=yyy.
+     */
+    private void handleOptionWithEqual(final String token, final int pos, final String hyphenToken) throws ParseException {
+        final String opt = token.substring(0, pos);
+        final String value = token.substring(pos + 1);
+
+        if (opt.length() == 1) {
+            handleShortOptionWithValue(opt, value, hyphenToken);
+        } else if (isJavaProperty(opt)) {
+            handleJavaPropertyWithValue(opt, value);
+        } else {
+            // -L=V or -l=V
+            handleLongOptionWithEqual(hyphenToken);
+        }
+    }
+
+    /**
+     * Handles short options with values like -S=V.
+     */
+    private void handleShortOptionWithValue(final String opt, final String value, final String hyphenToken) throws ParseException {
+        final Option option = options.getOption(opt);
+        if (option != null && option.acceptsArg()) {
+            handleOption(option);
+            currentOption.processValue(value);
+            currentOption = null;
+        } else {
+            handleUnknownToken(hyphenToken);
+        }
+    }
+
+    /**
+     * Handles Java properties with values like -SV1=V2 (-Dkey=value).
+     */
+    private void handleJavaPropertyWithValue(final String opt, final String value) throws ParseException {
+        handleOption(options.getOption(opt.substring(0, 1)));
+        currentOption.processValue(opt.substring(1));
+        currentOption.processValue(value);
+        currentOption = null;
     }
 
     /**
