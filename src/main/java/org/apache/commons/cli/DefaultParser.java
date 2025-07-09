@@ -501,25 +501,46 @@ public class DefaultParser implements CommandLineParser {
             if (opt == null) {
                 throw new UnrecognizedOptionException("Default option wasn't defined", option);
             }
-            // if the option is part of a group, check if another option of the group has been selected
-            final OptionGroup group = options.getOptionGroup(opt);
-            final boolean selected = group != null && group.isSelected();
-            if (!cmd.hasOption(option) && !selected) {
-                // get the value from the properties
+            
+            if (shouldProcessPropertyOption(option, opt)) {
                 final String value = properties.getProperty(option);
-
-                if (opt.hasArg()) {
-                    if (Util.isEmpty(opt.getValues())) {
-                        opt.processValue(stripLeadingAndTrailingQuotesDefaultOff(value));
-                    }
-                } else if (!("yes".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value) || "1".equalsIgnoreCase(value))) {
-                    // if the value is not yes, true or 1 then don't add the option to the CommandLine
-                    continue;
-                }
-                handleOption(opt);
-                currentOption = null;
+                processPropertyOption(opt, value);
             }
         }
+    }
+
+    /**
+     * Determines if a property option should be processed.
+     */
+    private boolean shouldProcessPropertyOption(final String option, final Option opt) {
+        if (cmd.hasOption(option)) {
+            return false;
+        }
+        final OptionGroup group = options.getOptionGroup(opt);
+        return group == null || !group.isSelected();
+    }
+
+    /**
+     * Processes a property option with its value.
+     */
+    private void processPropertyOption(final Option opt, final String value) throws ParseException {
+        if (opt.hasArg()) {
+            if (Util.isEmpty(opt.getValues())) {
+                opt.processValue(stripLeadingAndTrailingQuotesDefaultOff(value));
+            }
+        } else if (!isValidBooleanValue(value)) {
+            // if the value is not yes, true or 1 then don't add the option to the CommandLine
+            return;
+        }
+        handleOption(opt);
+        currentOption = null;
+    }
+
+    /**
+     * Checks if a value represents a valid boolean true value.
+     */
+    private boolean isValidBooleanValue(final String value) {
+        return "yes".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value) || "1".equalsIgnoreCase(value);
     }
 
     /**
