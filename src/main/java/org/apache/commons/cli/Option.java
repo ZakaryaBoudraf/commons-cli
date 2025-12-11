@@ -387,8 +387,8 @@ public class Option implements Cloneable, Serializable {
     }
 
     /** The number of argument values this option can have. */
-    private int argCount = UNINITIALIZED;
-
+    private /*@ spec_public @*/ int argCount = UNINITIALIZED;
+    
     /** The name of the argument for this option. */
     private String argName;
 
@@ -895,6 +895,10 @@ public class Option implements Cloneable, Serializable {
      *
      * @param num the number of argument values.
      */
+    /*@
+      @ requires num >= 0 || num == -2;
+      @ ensures this.argCount == num;
+      @*/
     public void setArgs(final int num) {
         this.argCount = num;
     }
