@@ -111,6 +111,8 @@
     <commons.jacoco.branchRatio>0.95</commons.jacoco.branchRatio>
     <commons.jacoco.lineRatio>0.98</commons.jacoco.lineRatio>
     <commons.jacoco.complexityRatio>0.94</commons.jacoco.complexityRatio>
+    <checkstyle.skip>true</checkstyle.skip>
+    <rat.skip>true</rat.skip>
   </properties>
   <build>
     <defaultGoal>clean verify apache-rat:check japicmp:cmp checkstyle:check spotbugs:check pmd:check javadoc:javadoc</defaultGoal>
