@@ -387,8 +387,9 @@ public class Option implements Cloneable, Serializable {
     }
 
     /** The number of argument values this option can have. */
-    private /*@ spec_public @*/ int argCount = UNINITIALIZED;
-    
+    /*@ spec_public @*/
+    private int argCount = UNINITIALIZED;
+
     /** The name of the argument for this option. */
     private String argName;
 
